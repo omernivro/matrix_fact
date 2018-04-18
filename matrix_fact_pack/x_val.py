@@ -47,44 +47,60 @@ def cross_val_miss_mat(k, iter_num, x):
     return(tr_idx, num_tr, val_idx, num_val)
 
 
-def cross_val_imf_mat(k, iter_num, tr_idx, sort=True):
+def cross_val_imf_mat(k, iter_num, tr_idx, sort=True, same=True, n_user=None):
     """ In general when conducting split for videos, we want to throw
-out different videos for different users. It is not realistic that
-all users didn't watch the same videos."""
+    out different videos for different users. It is not realistic that
+    all users didn't watch the same videos unless it's
+    a timed programme schedule."""
 
     # k - number of folds
     # iter - iteration number
     # tr_idx - training indices
     # RETURNS: new train and validation indices
 
-    val_st_idx = len(tr_idx) * (iter_num - 1) / k
-    val_end_idx = len(tr_idx) * iter_num / k
+    if same is True:
+        _tr_idx = tr_idx.reshape(n_user, -1)
+        n_cols = int(len(tr_idx) / n_user)
+        val_st_idx = n_cols * (iter_num - 1) / k
+        val_end_idx = n_cols * iter_num / k
+        val_idx = _tr_idx[:, val_st_idx:val_end_idx].reshape(-1)
+        tr_idx = tr_idx[~np.isin(tr_idx, val_idx)]
 
-    val_idx = tr_idx[val_st_idx : val_end_idx]
-    tr_idx = tr_idx[~np.isin(tr_idx, val_idx)]
+    else:
+        val_st_idx = len(tr_idx) * (iter_num - 1) / k
+        val_end_idx = len(tr_idx) * iter_num / k
 
-    if (sort is True):
-        tr_idx, val_idx = sorted(tr_idx), sorted(val_idx)
+        val_idx = tr_idx[val_st_idx: val_end_idx]
+        tr_idx = tr_idx[~np.isin(tr_idx, val_idx)]
 
-    assert (any(np.isin(val_idx, tr_idx)) is False)
+        if (sort is True):
+            tr_idx, val_idx = sorted(tr_idx), sorted(val_idx)
+
+        assert (any(np.isin(val_idx, tr_idx)) is False)
     return(tr_idx, val_idx)
 
 
-def rand_idx_split(num_obser, tr_precent, sort=True):
+def rand_idx_split(num_obser, tr_precent, n_row=None, sort=True, same=True):
     # randomaly permutate numbers, then split train & test data accordingly.
 
-    rand_0_1 = np.random.rand(num_obser, 1)
+    if same is False:
+        rand_0_1 = np.random.rand(num_obser, 1)
 
-    indices = np.random.permutation(rand_0_1.shape[0])
+        indices = np.random.permutation(rand_0_1.shape[0])
 
-    tr_abs = int(num_obser * tr_precent)
+        tr_abs = int(num_obser * tr_precent)
 
-    tr_idx, te_idx = indices[:tr_abs], indices[tr_abs:(num_obser)]
+        tr_idx, te_idx = indices[:tr_abs], indices[tr_abs:(num_obser)]
 
-    if (sort is True):
-        tr_idx = np.asarray(sorted(tr_idx))
+        if (sort is True):
+            tr_idx = np.asarray(sorted(tr_idx))
 
-    te_idx = np.asarray(sorted(te_idx))
+        te_idx = np.asarray(sorted(te_idx))
+    else:
+        n_col = int(tr_precent * (num_obser / n_row))
+        all_idx = np.array(range(num_obser)).reshape(n_row, -1)
+        tr_idx = all_idx[:, :n_col].reshape(-1)
+        te_idx = all_idx[:, n_col:].reshape(-1)
 
     return(tr_idx, te_idx)
 
@@ -92,6 +108,7 @@ def rand_idx_split(num_obser, tr_precent, sort=True):
 def main():
     aa, cc = rand_idx_split(100, 0.8, sort=False)
     print cc
+
 
 if __name__ == main:
     main()
