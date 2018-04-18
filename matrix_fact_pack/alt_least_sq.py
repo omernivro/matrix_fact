@@ -43,6 +43,7 @@ class base_model:
         self.conf = ((self._alpha * np.copy(self.confidence_gathered).reshape(-1, 1)) +
                      np.reshape(np.ones(shape=[np.shape(np.copy(self.confidence_gathered))[0]]), [-1, 1]))
 
+        ##### still need to take only the X, Y
         self.regularizer_Y = np.copy(np.linalg.norm(self.Y.copy()))
         self.regularizer_X = np.copy(np.linalg.norm(self.X.copy()))
 
@@ -58,11 +59,8 @@ class base_model:
         # print len(self.sq_diff)
         # print ('check:', (np.copy(self.conf) * np.copy(self.sq_diff))[1])
         self.mse = (np.sum((np.copy(self.conf) *
-                                     np.copy(self.sq_diff))) / len(idx))
-
-        # print self.mse
-
-        # \ + (self._beta * (self.regularizer_X + self.regularizer_Y))
+                                np.copy(self.sq_diff))) / len(idx)) \
+            + (self._beta * (self.regularizer_X + self.regularizer_Y))
 
         # self.mse = (np.sum(self.sq_diff) / len(idx)) \
         #     + (self._beta * (self.regularizer_X + self.regularizer_Y))
@@ -176,7 +174,7 @@ def main():
     row = 0
     k_fold = 5
     sweep = 10
-    true_matrix, confidence_matrix = gen_fake_matrix_implicit_confid(25, 30)
+    true_matrix, confidence_matrix = gen_fake_matrix_implicit_confid(25, 80)
 
     # print ('confidence_matrix original item 0', confidence_matrix[:, 0])
     # print ('true_matrix original item 0', true_matrix[:, 0])
@@ -189,7 +187,7 @@ def main():
                 should_restart = True
                 print('should restart:', i)
                 true_matrix, confidence_matrix = gen_fake_matrix_implicit_confid(
-                    15, 20)
+                    25, 80)
                 break
     tr_idx, te_idx = rand_idx_split(
         num_users * num_items, tr_precent=0.8, n_row=num_users, sort=False, same=False)
@@ -205,8 +203,8 @@ def main():
     val_c_u, val_c_i = build_conf_diags(np.copy(tr_conf_mat))
     val_user_pref, val_item_pref = build_pref_vecs(np.copy(tr_matrix))
 
-    fact = [10]
-    beta = [0.05]
+    fact = [10, 40, 70]
+    beta = [0.05, 0.5, 1, 3, 5, 10]
     best_lambda_fac = np.zeros((sweep * len(fact) * len(beta), 5))
     for factors in fact:
         for bet in beta:
@@ -226,12 +224,17 @@ def main():
                     # print(np.copy(tr_matrix).reshape(-1)[val_idx])
                     # print(np.copy(n_train_matrix).reshape(-1)[val_idx])
                     # print('n_tr_conf 0 item', (np.copy(n_tr_conf[:, 0])))
-                    for i in range(num_items):
-                        if(np.all(n_train_matrix[:, i] == 0)==True):
+                    for prob in range(num_items):
+                        if(np.all(n_train_matrix[:, prob] == 0)==True):
                                 # indices = np.array(range(num_items * num_users)).reshape(-1, num_items)
                                 # print indices[:, i]
                                 # print ('val idx:', val_idx)
-                                print('problem:', i)
+                                print('problem is that we have an item which is\
+                                 completely 0 for all users \
+                                which means its confidence diag matrix \
+                                would be all 0 causing Y to be 0 for some rows\
+                                which in turn will produce 0 prediction to all\
+                                users w.r.t these items. The problematic column is:', prob)
                                 # print('true_matrix:', true_matrix[:, i])
                                 # print('tr_matrix:', tr_matrix[:, i])
                                 # print('n_train', n_train_matrix[:, i])
@@ -257,10 +260,10 @@ def main():
                     mean_tr_err.append(tr_err.copy())
                     mean_val_err.append(val_err.copy())
 
-                    # print('# factors:', factors, 'beta:', bet, 'cv no:', cv_iter, 'sweep no:', i, 'train mse:',
-                    #       tr_err)
-                    # print('# factors:', factors, 'beta:', bet, 'cv no:', cv_iter, 'sweep no:', i, 'val mse:',
-                    #       val_err)
+                    print('# factors:', factors, 'beta:', bet, 'cv no:', cv_iter, 'sweep no:', i, 'train mse:',
+                          tr_err)
+                    print('# factors:', factors, 'beta:', bet, 'cv no:', cv_iter, 'sweep no:', i, 'val mse:',
+                          val_err)
                 a = np.array([i, factors, bet, np.mean(mean_tr_err),
                               np.mean(mean_val_err)]).reshape(1, 5)
                 best_lambda_fac[row, :] = np.array(a)
@@ -268,6 +271,7 @@ def main():
     choose_params = best_lambda_fac[np.where(
         best_lambda_fac[:, 4] == min(best_lambda_fac[:, 4])), :][0][0][1:3]
     '''train with best params all the dataset'''
+    print ('best params:', choose_params)
     full_model = train_model(true_matrix=np.copy(tr_matrix), factors=int(
         choose_params[0]), _beta=choose_params[1])
 
