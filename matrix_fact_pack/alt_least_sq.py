@@ -68,7 +68,7 @@ class train_model(base_model):
             self.Y_t_conf_Y = np.matmul(
                 np.matmul(np.transpose(self.Y), self.confid_minus_eye), self.Y)
             self.first_term_u = np.linalg.inv(
-                self.Y_t_Y + self.Y_t_conf_Y+ (self._beta * np.eye(np.shape(self.Y_t_conf_Y)[0])))
+                self.Y_t_Y + self.Y_t_conf_Y + (self._beta * np.eye(np.shape(self.Y_t_conf_Y)[0])))
             self.second_term_u = np.matmul(
                 np.matmul(np.transpose(self.Y), self.c_u[i]), self.user_pref[i])
             self.X[i, :] = np.matmul(self.first_term_u, self.second_term_u)
@@ -102,16 +102,36 @@ class eval_model(base_model):
 
     def percentile_rank(self, idx):
 
-        predicted = self.prediction().reshape(-1)[idx]
+        predicted = self.prediction().reshape(-1)
 
-        # ordered_list_idx = (-predicted).argsort()[:predicted.shape[1]]
+        per_rank = 0
 
-        # percentiles = np.array(range(np.shape(ordered_list_idx)[1])).astype('float32') * ((1 / np.shape(ordered_list_idx)[1]))
+        for i in range(self.num_users):
+            if i == 0:
+                indices = idx[idx < (i * self.num_items) + self.num_items]
+            else:
+                indices = idx[(idx > ((i-1) * self.num_items) + self.num_items)
+                                 & (idx < (i * self.num_items) + self.num_items)]
 
-        # print predicted
+            ordered_list_idx = (-predicted).argsort()[indices]
 
+            percentiles = np.array(range(len(ordered_list_idx))).astype(
+                'float32') * ((1 / len(ordered_list_idx)))
 
-        # return(np.diag(np.matmul(true_matrix, ranking)))
+            # print self.true_matrix.reshape(-1)[ordered_list_idx]
+            # print self.true_matrix.reshape(-1)[ordered_list_idx] * percentiles
+
+            per_rank += sum(self.true_matrix.reshape(-1)[ordered_list_idx] * percentiles)
+
+        # print indices
+        # print ordered_list_idx
+        # print per_rank
+        # print percentiles
+        # print self.true_matrix.reshape(-1)[idx]
+
+        exp_per_rank = per_rank / sum(self.true_matrix.reshape(-1)[idx])
+
+        return(exp_per_rank)
 
 # insert two states if you're training before choosing regularization or after.
 
@@ -122,15 +142,18 @@ def main():
     sweep = 10
     true_matrix, confidence_matrix = gen_fake_matrix_implicit_confid(
         20, 70)
+
     num_users, num_items = true_matrix.shape
     tr_idx, te_idx = rand_idx_split(
         num_users * num_items, tr_precent=0.8, n_row=num_users, sort=False, same=False)
+
+    # print true_matrix.reshape(-1)[te_idx]
+
     tr_matrix, tr_conf_mat = zero_out_test_vals(
-        true_matrix, confidence_matrix, te_idx)
+        np.copy(true_matrix), confidence_matrix, te_idx)
+
     val_c_u, val_c_i = build_conf_diags(tr_conf_mat)
     val_user_pref, val_item_pref = build_pref_vecs(tr_matrix)
-
-
 
     fact = [10, 40]
     beta = [0.05, 1]
@@ -165,10 +188,10 @@ def main():
                     mean_tr_err.append(tr_err.copy())
                     mean_val_err.append(val_err.copy())
 
-                    # print('# factors:', factors, 'beta:', bet, 'cv no:', cv_iter, 'sweep no:', i, 'train mse:',
-                    #       tr_err)
-                    # print('# factors:', factors, 'beta:', bet, 'cv no:', cv_iter, 'sweep no:', i, 'val mse:',
-                    #       val_err)
+                    print('# factors:', factors, 'beta:', bet, 'cv no:', cv_iter, 'sweep no:', i, 'train mse:',
+                          tr_err)
+                    print('# factors:', factors, 'beta:', bet, 'cv no:', cv_iter, 'sweep no:', i, 'val mse:',
+                          val_err)
                 a = np.array([i, factors, bet, np.mean(mean_tr_err),
                               np.mean(mean_val_err)]).reshape(1, 5)
                 best_lambda_fac[row, :] = np.array(a)
@@ -186,12 +209,12 @@ def main():
         X = train_model.user_updt(full_model)
         Y = train_model.item_updt(full_model)
 
-    print full_model.prediction().reshape(-1)[te_idx]
+    # print full_model.prediction().reshape(-1)[te_idx]
 
-    test = eval_model(X, Y, true_matrix=true_matrix, conf_matrix=confidence_matrix, factors=int(choose_params[0]), _beta=choose_params[1])
+    test = eval_model(X, Y, true_matrix=np.copy(true_matrix), conf_matrix=confidence_matrix, factors=int(choose_params[0]), _beta=choose_params[1])
     te_err = test.loss(te_idx)
     print te_err
-    # print test.percentile_rank(te_idx)
+    print test.percentile_rank(te_idx)
 
 
 if __name__ == "__main__":
