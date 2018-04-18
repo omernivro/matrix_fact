@@ -108,7 +108,7 @@ class eval_model(base_model):
 
         # percentiles = np.array(range(np.shape(ordered_list_idx)[1])).astype('float32') * ((1 / np.shape(ordered_list_idx)[1]))
 
-        print predicted
+        # print predicted
 
 
         # return(np.diag(np.matmul(true_matrix, ranking)))
@@ -139,7 +139,6 @@ def main():
         for bet in beta:
             build_model = train_model(
                 np.copy(true_matrix), factors=factors, _beta=bet)
-            print build_model.prediction().reshape(-1)[te_idx]
             for i in range(sweep):
                 mean_tr_err = []
                 mean_val_err = []
@@ -157,21 +156,19 @@ def main():
 
                     X = train_model.user_updt(build_model)
                     Y = train_model.item_updt(build_model)
-                    print build_model.prediction().reshape(-1)[te_idx]
 
                     evaluate = eval_model(X, Y, true_matrix=tr_matrix, conf_matrix=tr_conf_mat, c_u=val_c_u, c_i=val_c_i,
                                           user_pref=val_user_pref, item_pref=val_item_pref, factors=factors, _beta=bet)
 
-                    # print build_model.prediction().reshape(-1)[val_idx]
                     tr_err = build_model.loss(n_tr_idx)
                     val_err = evaluate.loss(val_idx)
                     mean_tr_err.append(tr_err.copy())
                     mean_val_err.append(val_err.copy())
 
-                    print('# factors:', factors, 'beta:', bet, 'cv no:', cv_iter, 'sweep no:', i, 'train mse:',
-                          tr_err)
-                    print('# factors:', factors, 'beta:', bet, 'cv no:', cv_iter, 'sweep no:', i, 'val mse:',
-                          val_err)
+                    # print('# factors:', factors, 'beta:', bet, 'cv no:', cv_iter, 'sweep no:', i, 'train mse:',
+                    #       tr_err)
+                    # print('# factors:', factors, 'beta:', bet, 'cv no:', cv_iter, 'sweep no:', i, 'val mse:',
+                    #       val_err)
                 a = np.array([i, factors, bet, np.mean(mean_tr_err),
                               np.mean(mean_val_err)]).reshape(1, 5)
                 best_lambda_fac[row, :] = np.array(a)
@@ -189,7 +186,7 @@ def main():
         X = train_model.user_updt(full_model)
         Y = train_model.item_updt(full_model)
 
-    # print full_model.prediction().reshape(-1)[te_idx]
+    print full_model.prediction().reshape(-1)[te_idx]
 
     test = eval_model(X, Y, true_matrix=true_matrix, conf_matrix=confidence_matrix, factors=int(choose_params[0]), _beta=choose_params[1])
     te_err = test.loss(te_idx)
