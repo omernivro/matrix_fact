@@ -38,22 +38,29 @@ class base_model:
 
         self.confidence_gathered = self.conf_matrix.copy().reshape(-1)[idx]
 
-        self.conf = ((self._alpha * np.copy(self.confidence_gathered)) +
+        # print self.confidence_gathered.shape
+
+        self.conf = ((self._alpha * np.copy(self.confidence_gathered).reshape(-1, 1)) +
                      np.reshape(np.ones(shape=[np.shape(np.copy(self.confidence_gathered))[0]]), [-1, 1]))
 
         self.regularizer_Y = np.copy(np.linalg.norm(self.Y.copy()))
         self.regularizer_X = np.copy(np.linalg.norm(self.X.copy()))
 
         self.sq_diff = np.square(
-            (np.copy(self.true_matrix).reshape(-1)[idx]) - (np.copy(predicted)))
+            (np.copy(self.true_matrix).reshape(-1)[idx]) - (np.copy(predicted))).reshape(-1, 1)
 
         # print self.sq_diff
 
         # print sum(np.dot(self.conf, self.sq_diff))
         # print len(idx)
         # print self.conf
-        # print np.matmul(np.copy(self.conf) , np.copy(self.sq_diff))
-        self.mse = (np.sum(np.matmul(np.copy(self.conf) , np.copy(self.sq_diff)))/ len(idx))
+        # print self.conf.shape
+        # print len(self.sq_diff)
+        # print ('check:', (np.copy(self.conf) * np.copy(self.sq_diff))[1])
+        self.mse = (np.sum((np.copy(self.conf) *
+                                     np.copy(self.sq_diff))) / len(idx))
+
+        # print self.mse
 
         # \ + (self._beta * (self.regularizer_X + self.regularizer_Y))
 
@@ -81,7 +88,8 @@ class train_model(base_model):
                 self.Y_t_Y.copy() + self.Y_t_conf_Y.copy() + (self._beta * np.eye(np.shape(self.Y_t_conf_Y.copy())[0])))
             self.second_term_u = np.matmul(
                 np.matmul(np.transpose(self.Y.copy()), self.c_u[i].copy()), self.user_pref[i].copy())
-            self.X[i, :] = np.matmul(self.first_term_u.copy(), self.second_term_u.copy())
+            self.X[i, :] = np.matmul(
+                self.first_term_u.copy(), self.second_term_u.copy())
 
         return(self.X.copy())
 
@@ -89,7 +97,6 @@ class train_model(base_model):
         self.X_t_X = np.matmul(np.transpose(self.X.copy()), self.X.copy())
         # print ('xtx:', self.X_t_X)
         for j in range(self.num_items):
-
 
             self.confidx_minus_eye = (self.c_i[j].copy() -
                                       np.eye(np.shape(self.c_i[j].copy())[0]))
@@ -100,8 +107,10 @@ class train_model(base_model):
                 self.X_t_X.copy() + self.X_t_conf_X.copy() + (self._beta * np.eye(np.shape(self.X_t_conf_X.copy())[0])))
             self.second_term = np.matmul(
                 np.matmul(np.transpose(self.X.copy()), self.c_i[j].copy()), self.item_pref[j].copy())
-            self.Y[j, :] = np.matmul(self.first_term.copy(), self.second_term.copy().reshape(-1, 1)).reshape(-1)
-            if j==0:
+            self.Y[j, :] = np.matmul(self.first_term.copy(
+            ), self.second_term.copy().reshape(-1, 1)).reshape(-1)
+            if j == 0:
+                pass
                 # print ('item pref', self.item_pref[0])
                 # print ('confidence_diag', self.c_i[0])
                 # print ('confidence_diag shape', self.c_i[0].shape)
@@ -109,10 +118,9 @@ class train_model(base_model):
                 # print ('xt_conf_x', self.X_t_conf_X)
                 # print ('first', self.first_term)
                 # print ('first', self.first_term.shape)
-                print ('second', self.second_term)
+                # print('second', self.second_term)
                 # print ('second', self.second_term.reshape(-1, 1).shape)
                 # print('y_j:', j, self.Y[j, :])
-
 
         return(self.Y.copy())
 
@@ -137,19 +145,19 @@ class eval_model(base_model):
                 indices = idx[idx < (i * self.num_items) + self.num_items]
             else:
                 indices = idx[(idx > ((i-1) * self.num_items) + self.num_items)
-                                 & (idx < (i * self.num_items) + self.num_items)]
+                              & (idx < (i * self.num_items) + self.num_items)]
 
             ordered_list_idx = (-predicted).argsort()[indices]
 
             percentiles = np.array(range(len(ordered_list_idx))).astype(
-                'float32') * ((1 / (len(ordered_list_idx) -1) ))
-
+                'float32') * ((1 / (len(ordered_list_idx) - 1)))
 
             # print self.true_matrix.reshape(-1)[ordered_list_idx]
             # print self.true_matrix.reshape(-1)[ordered_list_idx] * percentiles
 
             # print (self.true_matrix.reshape(-1)[ordered_list_idx] * percentiles).shape
-            per_rank += sum(self.true_matrix.reshape(-1)[ordered_list_idx] * percentiles)
+            per_rank += sum(self.true_matrix.reshape(-1)
+                            [ordered_list_idx] * percentiles)
 
         # print indices
         # print ordered_list_idx
@@ -168,7 +176,7 @@ def main():
     row = 0
     k_fold = 5
     sweep = 10
-    true_matrix, confidence_matrix = gen_fake_matrix_implicit_confid(10, 30)
+    true_matrix, confidence_matrix = gen_fake_matrix_implicit_confid(25, 30)
 
     # print ('confidence_matrix original item 0', confidence_matrix[:, 0])
     # print ('true_matrix original item 0', true_matrix[:, 0])
@@ -177,10 +185,11 @@ def main():
     while should_restart:
         should_restart = False
         for i in range(num_items):
-            if(np.all(true_matrix[:, i] == 0) is True):
+            if(np.all(true_matrix[:, i] == 0)==True):
                 should_restart = True
-                print ('should restart:', should_restart)
-                true_matrix, confidence_matrix = gen_fake_matrix_implicit_confid(10, 30)
+                print('should restart:', i)
+                true_matrix, confidence_matrix = gen_fake_matrix_implicit_confid(
+                    15, 20)
                 break
     tr_idx, te_idx = rand_idx_split(
         num_users * num_items, tr_precent=0.8, n_row=num_users, sort=False, same=False)
@@ -189,8 +198,9 @@ def main():
 
     tr_matrix, tr_conf_mat = zero_out_test_vals(
         np.copy(true_matrix), np.copy(confidence_matrix), te_idx)
-    print(tr_conf_mat[0, :])
-    print(tr_matrix[0, :])
+    # print(tr_conf_mat[0, :])
+    # print(np.copy(true_matrix).reshape(-1)[te_idx])
+    # print(np.copy(tr_matrix).reshape(-1)[te_idx])
 
     val_c_u, val_c_i = build_conf_diags(np.copy(tr_conf_mat))
     val_user_pref, val_item_pref = build_pref_vecs(np.copy(tr_matrix))
@@ -212,7 +222,20 @@ def main():
                     n_train_matrix, n_tr_conf = zero_out_test_vals(
                         np.copy(tr_matrix), np.copy(tr_conf_mat), val_idx)
                     # print ('n_tr_conf 0', n_tr_conf[0, :])
-                    print ('n_tr_conf 0 item', (n_tr_conf[:, 0]))
+                    # print ('val idx:', val_idx)
+                    # print(np.copy(tr_matrix).reshape(-1)[val_idx])
+                    # print(np.copy(n_train_matrix).reshape(-1)[val_idx])
+                    # print('n_tr_conf 0 item', (np.copy(n_tr_conf[:, 0])))
+                    for i in range(num_items):
+                        if(np.all(n_train_matrix[:, i] == 0)==True):
+                                # indices = np.array(range(num_items * num_users)).reshape(-1, num_items)
+                                # print indices[:, i]
+                                # print ('val idx:', val_idx)
+                                print('problem:', i)
+                                # print('true_matrix:', true_matrix[:, i])
+                                # print('tr_matrix:', tr_matrix[:, i])
+                                # print('n_train', n_train_matrix[:, i])
+
                     # print ('diag user 0',  np.diag(n_tr_conf[0, :]))
                     # print ('diag item 0',  np.diag(n_tr_conf[:, 0]))
 
@@ -245,11 +268,12 @@ def main():
     choose_params = best_lambda_fac[np.where(
         best_lambda_fac[:, 4] == min(best_lambda_fac[:, 4])), :][0][0][1:3]
     '''train with best params all the dataset'''
-    full_model = train_model(true_matrix=np.copy(tr_matrix), factors=int(choose_params[0]), _beta=choose_params[1])
+    full_model = train_model(true_matrix=np.copy(tr_matrix), factors=int(
+        choose_params[0]), _beta=choose_params[1])
 
     full_model.c_u, full_model.c_i = build_conf_diags(np.copy(tr_conf_mat))
     full_model.user_pref, full_model.item_pref = build_pref_vecs(
-                                                            np.copy(tr_matrix))
+        np.copy(tr_matrix))
 
     for sweep in range(sweep):
         X = np.copy(train_model.user_updt(full_model))
@@ -257,10 +281,11 @@ def main():
 
     # print full_model.prediction().reshape(-1)[te_idx]
 
-    test = eval_model(X.copy(), Y.copy(), true_matrix=np.copy(true_matrix), conf_matrix=np.copy(confidence_matrix), factors=int(choose_params[0]), _beta=choose_params[1])
+    test = eval_model(X.copy(), Y.copy(), true_matrix=np.copy(true_matrix), conf_matrix=np.copy(
+        confidence_matrix), factors=int(choose_params[0]), _beta=choose_params[1])
     te_err = test.loss(te_idx)
-    # print te_err
-    # print test.percentile_rank(te_idx)
+    print ('test mse:', te_err)
+    print ('expected percentile rank:', test.percentile_rank(te_idx))
 
 
 if __name__ == "__main__":

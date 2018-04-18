@@ -27,7 +27,7 @@ def get_shifted_mat_by_mean_n_std(mat):
 
 def gen_fake_matrix_implicit_full(dim_ro, dim_col):
     mat = np.random.choice(np.arange(0, 2), p=[
-                           0.7, 0.3], size=(dim_ro, dim_col))
+                           0.6, 0.4], size=(dim_ro, dim_col))
     return(mat)
 
 

@@ -58,7 +58,7 @@ def cross_val_imf_mat(k, iter_num, tr_idx, sort=True, same=True, n_user=None):
     # tr_idx - training indices
     # RETURNS: new train and validation indices
 
-    if same is True:
+    if same == True:
         _tr_idx = tr_idx.reshape(n_user, -1)
         n_cols = int(len(tr_idx) / n_user)
         val_st_idx = n_cols * (iter_num - 1) / k
@@ -83,7 +83,7 @@ def cross_val_imf_mat(k, iter_num, tr_idx, sort=True, same=True, n_user=None):
 def rand_idx_split(num_obser, tr_precent, n_row=None, sort=True, same=True):
     # randomaly permutate numbers, then split train & test data accordingly.
 
-    if same is False:
+    if same == False:
         rand_0_1 = np.random.rand(num_obser, 1)
 
         indices = np.random.permutation(rand_0_1.shape[0])
