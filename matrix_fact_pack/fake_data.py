@@ -36,14 +36,15 @@ def gen_fake_matrix_implicit_confid(dim_ro, dim_col):
     true_matrix = gen_fake_matrix_implicit_full(dim_ro, dim_col)
     mat = np.random.random(dim_ro * dim_col).reshape(dim_ro, dim_col)
     true_matrix = true_matrix.astype('float32')
-    confidence_matrix = (mat * true_matrix).astype('float32')
+    confidence_matrix = (np.copy(mat) * np.copy(true_matrix)).astype('float32')
 
     return(true_matrix, confidence_matrix)
 
 
 def main():
-    tr, matrix = gen_fake_matrix_implicit_confid(2, 10)
-    print tr
+    tr, matrix = gen_fake_matrix_implicit_confid(10, 30)
+    print tr[:, 13]
+    print matrix[:, 13]
 
 
 if __name__ == "__main__":
