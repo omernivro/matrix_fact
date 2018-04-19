@@ -59,8 +59,9 @@ class base_model:
         # print len(self.sq_diff)
         # print ('check:', (np.copy(self.conf) * np.copy(self.sq_diff))[1])
         self.mse = (np.sum((np.copy(self.conf) *
-                                np.copy(self.sq_diff))) / len(idx)) \
-            + (self._beta * (self.regularizer_X + self.regularizer_Y))
+                                np.copy(self.sq_diff))) / len(idx))
+        # \
+            # + (self._beta * (self.regularizer_X + self.regularizer_Y))
 
         # self.mse = (np.sum(self.sq_diff) / len(idx)) \
         #     + (self._beta * (self.regularizer_X + self.regularizer_Y))
@@ -174,7 +175,7 @@ def main():
     row = 0
     k_fold = 5
     sweep = 10
-    true_matrix, confidence_matrix = gen_fake_matrix_implicit_confid(25, 80)
+    true_matrix, confidence_matrix = gen_fake_matrix_implicit_confid(50, 200)
 
     # print ('confidence_matrix original item 0', confidence_matrix[:, 0])
     # print ('true_matrix original item 0', true_matrix[:, 0])
@@ -187,7 +188,7 @@ def main():
                 should_restart = True
                 print('should restart:', i)
                 true_matrix, confidence_matrix = gen_fake_matrix_implicit_confid(
-                    25, 80)
+                    50, 200)
                 break
     tr_idx, te_idx = rand_idx_split(
         num_users * num_items, tr_precent=0.8, n_row=num_users, sort=False, same=False)
@@ -204,7 +205,7 @@ def main():
     val_user_pref, val_item_pref = build_pref_vecs(np.copy(tr_matrix))
 
     fact = [10, 40, 70]
-    beta = [0.05, 0.5, 1, 3, 5, 10]
+    beta = [0.01, 0.05, 0.08, 0.5, 1, 3, 5, 10]
     best_lambda_fac = np.zeros((sweep * len(fact) * len(beta), 5))
     for factors in fact:
         for bet in beta:
